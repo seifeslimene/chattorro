@@ -1,8 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 
 const Login = () => {
   const router = useRouter();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError('');
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const email = fd.get('email');
+    const password = fd.get('password');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'same-origin',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Login failed');
+        return;
+      }
+      await router.push('/');
+    } catch {
+      setError('Network error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className='flex h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8'>
       <div className='w-full max-w-md space-y-8'>
@@ -10,8 +41,17 @@ const Login = () => {
           <h2 className='mt-6 text-center text-3xl font-bold tracking-tight text-gray-900'>
             Sign in to your account
           </h2>
+          {error ? (
+            <p className='mt-2 text-center text-sm text-red-600' role='alert'>
+              {error}
+            </p>
+          ) : null}
         </div>
-        <form className='mt-8 space-y-6' action='#' method='POST'>
+        <form
+          className='mt-8 space-y-6'
+          method='post'
+          onSubmit={onSubmit}
+        >
           <input type='hidden' name='remember' defaultValue='true' />
           <div className='-space-y-px rounded-md shadow-sm'>
             <div>
@@ -24,7 +64,8 @@ const Login = () => {
                 type='email'
                 autoComplete='email'
                 required
-                className='relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm'
+                disabled={loading}
+                className='relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100'
                 placeholder='Email address'
               />
             </div>
@@ -38,7 +79,8 @@ const Login = () => {
                 type='password'
                 autoComplete='current-password'
                 required
-                className='relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm'
+                disabled={loading}
+                className='relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100'
                 placeholder='Password'
               />
             </div>
@@ -50,6 +92,7 @@ const Login = () => {
                 id='remember-me'
                 name='remember-me'
                 type='checkbox'
+                disabled={loading}
                 className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
               />
               <label
@@ -70,7 +113,8 @@ const Login = () => {
           <div className='px-4 py-3 sm:px-6 grid grid-cols-2 gap-x-6 justify-items-start'>
             <button
               type='button'
-              className='group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+              disabled={loading}
+              className='group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50'
               onClick={() =>
                 router.push({
                   pathname: '/',
@@ -82,9 +126,10 @@ const Login = () => {
             </button>
             <button
               type='submit'
-              className='justify-self group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+              disabled={loading}
+              className='justify-self group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50'
             >
-              Sign in
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </div>
         </form>

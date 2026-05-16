@@ -1,29 +1,54 @@
 import executeQuery from "../../lib/db";
+import { hashPassword } from "../../lib/password";
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).end();
+  }
+
   try {
-    // Get data submitted in request's body.
     const body = req.body;
+    const firstName = body.firstName?.trim();
+    const lastName = body.lastName?.trim();
+    const email = (body.email || body.emailAddress)?.trim()?.toLowerCase();
+    const password = body.password;
 
-    // Optional logging to see the responses
-    // in the command line where next.js app is running.
-    // console.log("body: ", body);
-
-    // Guard clause checks for first and last name,
-    // and returns early if they are not found
-    if (!body.firstName || !body.lastName) {
-      // Sends a HTTP bad request error code
-      return res.status(400).json({ data: "First or last name not found" });
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        error:
+          "First name, last name, email, and password are required.",
+      });
     }
 
-    // Sends a HTTP success code
-    res.status(200).json({ success: 'A user is added to the database' });
-    const result = executeQuery({
-      query: "INSERT INTO users(firstname, lastname) VALUES(?, ?)",
-      values: [body.firstName, body.lastName],
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters." });
+    }
+
+    const passwordHash = hashPassword(password);
+
+    const existing = await executeQuery({
+      query: "SELECT id FROM users WHERE email = ? LIMIT 1",
+      values: [email],
     });
-    // console.log("Result: ", result);
+
+    if (existing.length > 0) {
+      return res.status(409).json({
+        error: "An account with this email already exists.",
+      });
+    }
+
+    await executeQuery({
+      query:
+        "INSERT INTO users (firstname, lastname, email, password_hash) VALUES (?, ?, ?, ?)",
+      values: [firstName, lastName, email, passwordHash],
+    });
+
+    return res.status(200).json({ success: true });
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    return res.status(500).json({ error: "Could not create account." });
   }
 }
